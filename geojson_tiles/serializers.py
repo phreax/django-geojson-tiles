@@ -12,7 +12,6 @@ import types
 import json
 
 from django.db.models.base import Model
-from django.db.models.query import QuerySet, ValuesQuerySet
 from django.core.serializers.python import Serializer as PythonSerializer
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.serializers.base import SerializationError
@@ -121,7 +120,7 @@ class GeoJSONSerializer(PythonSerializer):
                 self._current['properties'][field_name] = value
 
         elif not self.properties:
-            self._current['properties'][field_name] = value            
+            self._current['properties'][field_name] = value
 
     def getvalue(self):
         if callable(getattr(self.stream, 'getvalue', None)):
@@ -149,21 +148,6 @@ class GeoJSONSerializer(PythonSerializer):
                 m2m_value = lambda value: smart_unicode(value._get_pk_val(), strings_only=True)
             self._current['properties'][field.name] = [m2m_value(related)
                                for related in getattr(obj, field.name).iterator()]
-
-    def serialize_values_queryset(self, queryset):
-        for obj in queryset:
-            self.start_object(obj)
-
-            # handle the geometry field
-            self.handle_field(obj, self.geometry_field)
-
-            for field_name in obj:
-                if not field_name in obj:
-                    continue
-                if self.properties is None or field_name in self.properties:
-                    self.handle_field(obj, field_name)
-
-            self.end_object(obj)
 
     def serialize_queryset(self, queryset):
         opt = queryset.model._meta
@@ -215,12 +199,8 @@ class GeoJSONSerializer(PythonSerializer):
         self.crs = options.get("crs", True)
 
         self.start_serialization()
-        
-        if isinstance(queryset, ValuesQuerySet):
-            self.serialize_values_queryset(queryset)
 
-        elif isinstance(queryset, QuerySet):
-            self.serialize_queryset(queryset)
+        self.serialize_queryset(queryset)
 
         self.end_serialization()
         return self.getvalue()
